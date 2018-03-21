@@ -44,9 +44,13 @@ class GG(torch.utils.data.Dataset):
             self.labels = None
 
     def __getitem__(self, index):
-        [v] = fits.open(os.path.join(self.dir, "Public/Band1/imageEUC_VIS-{}.fits".format(100000 + index)))
-        [j] = fits.open(os.path.join(self.dir, "Public/Band2/imageEUC_J-{}.fits".format(100000 + index)))
-        [h] = fits.open(os.path.join(self.dir, "Public/Band3/imageEUC_H-{}.fits".format(100000 + index)))
+        with fits.open(os.path.join(self.dir, "Public/Band1/imageEUC_VIS-{}.fits".format(100000 + index))) as hdul:
+            v = hdul[0].data
+        with fits.open(os.path.join(self.dir, "Public/Band2/imageEUC_J-{}.fits".format(100000 + index))) as hdul:
+            j = hdul[0].data
+        with fits.open(os.path.join(self.dir, "Public/Band3/imageEUC_H-{}.fits".format(100000 + index))) as hdul:
+            h = hdul[0].data
+
         img = (v, j, h)
 
         if self.transform is not None:
