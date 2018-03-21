@@ -20,7 +20,7 @@ class GG(torch.utils.data.Dataset):
     def __init__(self, root, train=True, download=False, transform=None, target_transform=None):
         self.root = os.path.expanduser(root)
 
-        self.dir = os.path.join(self.root, "DataChallenge2trainDoOver.0" if train else "DataChallenge1.1")
+        self.dir = os.path.join(self.root, "DataChallenge2trainDoOver.0" if train else "DataChallenge2DoOver.0")
         self.transform = transform
         self.target_transform = target_transform
 
@@ -69,7 +69,6 @@ class GG(torch.utils.data.Dataset):
         vs = glob.glob(os.path.join(self.dir, "Public/Band1/imageEUC_VIS-*.fits"))
         js = glob.glob(os.path.join(self.dir, "Public/Band2/imageEUC_J-*.fits"))
         hs = glob.glob(os.path.join(self.dir, "Public/Band3/imageEUC_H-*.fits"))
-        print("{} files already present".format(len(vs)))
         return len(vs) > 0 and len(vs) == len(js) == len(hs)
 
     def _download(self, url):
