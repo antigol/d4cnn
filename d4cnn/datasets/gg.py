@@ -5,6 +5,7 @@ import torch
 import torch.utils.data
 from astropy.io import fits
 import tarfile
+import glob
 
 
 class GG(torch.utils.data.Dataset):
@@ -19,18 +20,18 @@ class GG(torch.utils.data.Dataset):
     def __init__(self, root, train=True, download=False, transform=None, target_transform=None):
         self.root = os.path.expanduser(root)
 
-        self.file = os.path.join(self.root, "DataChallenge1.1train.tar.gz" if train else "DataChallenge1.1.tar.gz")
+        self.dir = os.path.join(self.root, "DataChallenge2trainDoOver.0" if train else "DataChallenge1.1")
         self.transform = transform
         self.target_transform = target_transform
 
-        if download:
-            self.download(train)
-
         if not self._check_exists():
-            raise RuntimeError('Dataset not found.' +
-                               ' You can use download=True to download it')
+            if download:
+                self.download(train)
+            else:
+                raise RuntimeError('Dataset not found.' +
+                                   ' You can use download=True to download it')
 
-        self.tar = tarfile.open(self.file, "r:gz")
+        self.n = len(glob.glob(os.path.join(self.dir, "Public/Band1/imageEUC_VIS-*.fits")))
 
         if train:
             with open(os.path.join(self.root, "challenge2trainingKey.csv"), 'rt') as f:
@@ -38,18 +39,15 @@ class GG(torch.utils.data.Dataset):
                 header = next(reader)
                 self.labels = {}
                 for row in [x for x in reader]:
-                    self.labels[row[0]] = { key: value for key, value in zip(header[1:], row[1:])}
+                    self.labels[row[0]] = {key: value for key, value in zip(header[1:], row[1:])}
         else:
             self.labels = None
 
-    def __del__(self):
-        self.tar.close()
-
     def __getitem__(self, index):
-        [vis] = fits.open(self.tar.extractfile("DataChallenge2trainDoOver.0/Public/Band1/imageEUC_VIS-{}.fits".format(100000 + index)))
-        [j] = fits.open(self.tar.extractfile("DataChallenge2trainDoOver.0/Public/Band2/imageEUC_J-{}.fits".format(100000 + index)))
-        [h] = fits.open(self.tar.extractfile("DataChallenge2trainDoOver.0/Public/Band3/imageEUC_H-{}.fits".format(100000 + index)))
-        img = (vis, j, h)
+        [v] = fits.open(os.path.join(self.dir, "Public/Band1/imageEUC_VIS-{}.fits".format(100000 + index)))
+        [j] = fits.open(os.path.join(self.dir, "Public/Band2/imageEUC_J-{}.fits".format(100000 + index)))
+        [h] = fits.open(os.path.join(self.dir, "Public/Band3/imageEUC_H-{}.fits".format(100000 + index)))
+        img = (v, j, h)
 
         if self.transform is not None:
             img = self.transform(img)
@@ -65,15 +63,14 @@ class GG(torch.utils.data.Dataset):
             return img
 
     def __len__(self):
-        return len(self.files)
+        return self.n
 
     def _check_exists(self):
-        try:
-            tar = tarfile.open(self.file, "r:gz")
-            tar.close()
-            return True
-        except:
-            return False
+        vs = glob.glob(os.path.join(self.dir, "Public/Band1/imageEUC_VIS-*.fits"))
+        js = glob.glob(os.path.join(self.dir, "Public/Band2/imageEUC_J-*.fits"))
+        hs = glob.glob(os.path.join(self.dir, "Public/Band3/imageEUC_H-*.fits"))
+        print("{} files already present".format(len(vs)))
+        return len(vs) > 0 and len(vs) == len(js) == len(hs)
 
     def _download(self, url):
         import requests
@@ -110,7 +107,13 @@ class GG(torch.utils.data.Dataset):
                 raise
 
         url = self.url_train if train else self.url_test
-        self._download(url)
+        filename = self._download(url)
+
+        tar = tarfile.open(filename, "r:gz")
+        tar.extractall(self.root)
+        tar.close()
+
+        os.unlink(filename)
 
         if train:
             self._download(self.url_label)
