@@ -1,16 +1,24 @@
 # pylint: disable=E1101,R,C
+"""
+Downloads the Gravitational Lens Finding Challenge 1.1 dataset
+Usage example
+
+trainset = gg.GG("root", download=True, train=True)
+testset = gg.GG("root", download=True, train=False)
+
+(vis_band, j_band, h_band), labels = trainset[image_index]
+
+"""
 import os
 import csv
-import torch
-import torch.utils.data
 from astropy.io import fits
 import tarfile
 import glob
 
 
-class GG(torch.utils.data.Dataset):
+class GG:
     '''
-    Gravitational Lens Finding Challenge
+    Gravitational Lens Finding Challenge 1.1
     '''
 
     url_train = 'http://metcalf1.difa.unibo.it/blf-portal/data/DataChallenge1.1train.tar.gz'
@@ -26,7 +34,7 @@ class GG(torch.utils.data.Dataset):
 
         if not self._check_exists():
             if download:
-                self.download(train)
+                self._download_all(train)
             else:
                 raise RuntimeError('Dataset not found.' +
                                    ' You can use download=True to download it')
@@ -75,7 +83,7 @@ class GG(torch.utils.data.Dataset):
         hs = glob.glob(os.path.join(self.dir, "Public/Band3/imageEUC_H-*.fits"))
         return len(vs) > 0 and len(vs) == len(js) == len(hs)
 
-    def _download(self, url):
+    def _download_url(self, url):
         import requests
 
         filename = url.split('/')[-1]
@@ -95,11 +103,7 @@ class GG(torch.utils.data.Dataset):
 
         return file_path
 
-    def download(self, train):
-
-        if self._check_exists():
-            return
-
+    def _download_all(self, train):
         # download files
         try:
             os.makedirs(self.root)
@@ -110,7 +114,7 @@ class GG(torch.utils.data.Dataset):
                 raise
 
         url = self.url_train if train else self.url_test
-        filename = self._download(url)
+        filename = self._download_url(url)
 
         tar = tarfile.open(filename, "r:gz")
         tar.extractall(self.root)
@@ -119,6 +123,6 @@ class GG(torch.utils.data.Dataset):
         os.unlink(filename)
 
         if train:
-            self._download(self.url_label)
+            self._download_url(self.url_label)
 
         print('Done!')
