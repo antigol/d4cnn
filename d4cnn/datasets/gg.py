@@ -116,6 +116,7 @@ class GG:
         url = self.url_train if train else self.url_test
         filename = self._download_url(url)
 
+        print('Extracting ' + filename)
         tar = tarfile.open(filename, "r:gz")
         tar.extractall(self.root)
         tar.close()
