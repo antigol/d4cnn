@@ -6,11 +6,17 @@ from torch.autograd import Variable
 from .group import d4_inv, d4_mul, image_all_actions, field_all_actions
 
 
+def uniform(*size):
+    x = torch.rand(*size)
+    return (2 * x - 1) * (3 ** 0.5)
+
+
 class D4ConvRR(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, **kwargs):
         super().__init__()
         self.kwargs = kwargs
-        self.weight = nn.Parameter(torch.randn(8, out_channels, in_channels, kernel_size, kernel_size))
+        self.weight = nn.Parameter(uniform(8, out_channels, in_channels, kernel_size, kernel_size))
+        self.scale = (8 * in_channels * kernel_size ** 2) ** -0.5
 
     def forward(self, x):  # pylint: disable=W0221
         # x [batch, repr, channel, y, x]
@@ -28,14 +34,14 @@ class D4ConvRR(nn.Module):
         ], dim=0)
 
         y = x.view(x.size(0), 8 * x.size(2), x.size(3), x.size(4))
-        y = F.conv2d(y, weight, **self.kwargs)
+        y = F.conv2d(y, self.scale * weight, **self.kwargs)
         y = y.view(x.size(0), 8, -1, y.size(2), y.size(3))
         return y
 
 
-def test_D4ConvRR(image, out_channels, kernel_size, padding):
+def test_D4ConvRR(image, out_channels, kernel_size, **kwargs):
     # image [batch, repr, channel, y, x]
-    c = D4ConvRR(image.size(2), out_channels, kernel_size, padding=padding)
+    c = D4ConvRR(image.size(2), out_channels, kernel_size, **kwargs)
 
     xs = field_all_actions(c(Variable(image)).data, 1, 3, 4)
     ys = [c(Variable(gx)).data for gx in field_all_actions(image, 1, 3, 4)]
@@ -50,7 +56,8 @@ class D4ConvIR(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, **kwargs):
         super().__init__()
         self.kwargs = kwargs
-        self.weight = nn.Parameter(torch.randn(out_channels, in_channels, kernel_size, kernel_size))
+        self.weight = nn.Parameter(uniform(out_channels, in_channels, kernel_size, kernel_size))
+        self.scale = (in_channels * kernel_size ** 2) ** -0.5
 
     def forward(self, x):  # pylint: disable=W0221
         # x [batch, channel, y, x]
@@ -60,14 +67,14 @@ class D4ConvIR(nn.Module):
 
         weight = torch.cat(ws, dim=0)
 
-        y = F.conv2d(x, weight, **self.kwargs)
+        y = F.conv2d(x, self.scale * weight, **self.kwargs)
         y = y.view(x.size(0), 8, -1, y.size(2), y.size(3))
         return y
 
 
-def test_D4ConvIR(image, out_channels, kernel_size, padding):
+def test_D4ConvIR(image, out_channels, kernel_size, **kwargs):
     # image [batch, channel, y, x]
-    c = D4ConvIR(image.size(1), out_channels, kernel_size, padding=padding)
+    c = D4ConvIR(image.size(1), out_channels, kernel_size, **kwargs)
 
     xs = field_all_actions(c(Variable(image)).data, 1, 3, 4)
     ys = [c(Variable(gx)).data for gx in image_all_actions(image, 2, 3)]
