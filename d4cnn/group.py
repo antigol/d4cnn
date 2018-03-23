@@ -35,9 +35,9 @@ def image_all_actions(image, h, w):
     m2 = image.index_select(h, ih)
     i = m1.index_select(h, ih)
     tr = image.transpose(w, h)
-    m1tr = tr.index_select(w, iw)
-    m2tr = tr.index_select(h, ih)
-    itr = m1tr.index_select(h, ih)
+    m1tr = tr.index_select(w, ih)
+    m2tr = tr.index_select(h, iw)
+    itr = m1tr.index_select(h, iw)
     return [e, m1, m2, i, tr, m1tr, m2tr, itr]
 
 
