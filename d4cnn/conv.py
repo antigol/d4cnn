@@ -17,6 +17,7 @@ class D4ConvRR(nn.Module):
         self.kwargs = kwargs
         self.weight = nn.Parameter(uniform(8, out_channels, in_channels, kernel_size, kernel_size))
         self.scale = (8 * in_channels * kernel_size ** 2) ** -0.5
+        self.bias = nn.Parameter(torch.zeros(out_channels))
 
     def forward(self, x):  # pylint: disable=W0221
         # x [batch, repr, channel, y, x]
@@ -36,6 +37,7 @@ class D4ConvRR(nn.Module):
         y = x.view(x.size(0), 8 * x.size(2), x.size(3), x.size(4))
         y = F.conv2d(y, self.scale * weight, **self.kwargs)
         y = y.view(x.size(0), 8, -1, y.size(2), y.size(3))
+        y = y + self.bias.view(-1, 1, 1)
         return y
 
 
@@ -59,6 +61,7 @@ class D4ConvIR(nn.Module):
         self.kwargs = kwargs
         self.weight = nn.Parameter(uniform(out_channels, in_channels, kernel_size, kernel_size))
         self.scale = (in_channels * kernel_size ** 2) ** -0.5
+        self.bias = nn.Parameter(torch.zeros(out_channels))
 
     def forward(self, x):  # pylint: disable=W0221
         # x [batch, channel, y, x]
@@ -70,6 +73,7 @@ class D4ConvIR(nn.Module):
 
         y = F.conv2d(x, self.scale * weight, **self.kwargs)
         y = y.view(x.size(0), 8, -1, y.size(2), y.size(3))
+        y = y + self.bias.view(-1, 1, 1)
         return y
 
 
@@ -93,6 +97,7 @@ class D4ConvRI(nn.Module):
         self.kwargs = kwargs
         self.weight = nn.Parameter(uniform(out_channels, in_channels, kernel_size, kernel_size))
         self.scale = (8 * in_channels * kernel_size ** 2) ** -0.5
+        self.bias = nn.Parameter(torch.zeros(out_channels))
 
     def forward(self, x):  # pylint: disable=W0221
         # x [batch, repr, channel, y, x]
@@ -104,7 +109,7 @@ class D4ConvRI(nn.Module):
         weight = torch.cat(ws, dim=1)
 
         y = x.view(x.size(0), 8 * x.size(2), x.size(3), x.size(4))
-        y = F.conv2d(y, self.scale * weight, **self.kwargs)
+        y = F.conv2d(y, self.scale * weight, self.bias, **self.kwargs)
         return y
 
 
