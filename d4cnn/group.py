@@ -19,16 +19,20 @@ def field_action(u, field, g, h, w):
     return field_all_actions(field, g, h, w)[u]
 
 
+def variable_cuda_like(tensor, other):
+    if isinstance(other, Variable):
+        tensor = Variable(tensor)
+    if other.is_cuda:
+        tensor = tensor.cuda()
+    return tensor
+
+
 def image_all_actions(image, h, w):
 
     ih = torch.arange(image.size(h) - 1, -1, -1, out=torch.LongTensor())
     iw = torch.arange(image.size(w) - 1, -1, -1, out=torch.LongTensor())
-    if isinstance(image, Variable):
-        ih = Variable(ih)
-        iw = Variable(iw)
-    if image.is_cuda:
-        ih = ih.cuda()
-        iw = iw.cuda()
+    ih = variable_cuda_like(ih, image)
+    iw = variable_cuda_like(iw, image)
 
     e = image
     m1 = image.index_select(w, iw)
@@ -45,9 +49,9 @@ def field_all_actions(field, g, h, w):  # pylint: disable=W0613
     # return [(xv) -> f(u^-1 x u  u^-1 v) for u in G]
     return [
         # field = (xv) -> f(u^-1 x u  v)
-        field.contiguous().index_select(g, torch.LongTensor(
+        field.contiguous().index_select(g, variable_cuda_like(torch.LongTensor(
             [d4_mul[d4_inv[u]][v] for v in range(8)]
-        ))
+        ), field))
         for u, field in enumerate(image_all_actions(field, h, w))
     ]
 
