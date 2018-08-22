@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 from .group import d4_inv, d4_mul, image_all_actions, field_all_actions
 
 
@@ -41,7 +40,7 @@ class D4ConvRR(nn.Module):
         output = F.conv2d(output, self.scale * weight, **self.kwargs)
         output = output.view(input.size(0), 8, -1, output.size(2), output.size(3))
         if self.bias is not None:
-            output = output + self.bias.view(-1, 1, 1)
+            output = output + self.bias.view(-1, 1, 1)  # TODO add bias via F.conv2d
         return output
 
 
@@ -49,8 +48,8 @@ def test_D4ConvRR(image, out_channels, kernel_size, **kwargs):
     # image [batch, repr, channel, y, x]
     c = D4ConvRR(image.size(2), out_channels, kernel_size, **kwargs)
 
-    xs = field_all_actions(c(Variable(image)).data, 1, 3, 4)
-    ys = [c(Variable(gx)).data for gx in field_all_actions(image, 1, 3, 4)]
+    xs = field_all_actions(c(image), 1, 3, 4)
+    ys = [c(gx) for gx in field_all_actions(image, 1, 3, 4)]
 
     for x, y in zip(xs, ys):
         r = (x - y).std() / x.std()
@@ -89,8 +88,8 @@ def test_D4ConvIR(image, out_channels, kernel_size, **kwargs):
     # image [batch, channel, y, x]
     c = D4ConvIR(image.size(1), out_channels, kernel_size, **kwargs)
 
-    xs = field_all_actions(c(Variable(image)).data, 1, 3, 4)
-    ys = [c(Variable(gx)).data for gx in image_all_actions(image, 2, 3)]
+    xs = field_all_actions(c(image), 1, 3, 4)
+    ys = [c(gx) for gx in image_all_actions(image, 2, 3)]
 
     for x, y in zip(xs, ys):
         r = (x - y).std() / x.std()
@@ -128,8 +127,8 @@ def test_D4ConvRI(image, out_channels, kernel_size, **kwargs):
     # image [batch, repr, channel, y, x]
     c = D4ConvRI(image.size(2), out_channels, kernel_size, **kwargs)
 
-    xs = image_all_actions(c(Variable(image)).data, 2, 3)
-    ys = [c(Variable(gx)).data for gx in field_all_actions(image, 1, 3, 4)]
+    xs = image_all_actions(c(image), 2, 3)
+    ys = [c(gx) for gx in field_all_actions(image, 1, 3, 4)]
 
     for x, y in zip(xs, ys):
         r = (x - y).std() / x.std()
