@@ -1,8 +1,9 @@
-# pylint: disable=E1101,R,C
+# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .group import d4_inv, d4_mul, image_all_actions, field_all_actions
+
+from .group import d4_inv, d4_mul, field_all_actions, image_all_actions
 
 
 def uniform(*size):
@@ -21,7 +22,7 @@ class D4ConvRR(nn.Module):
         else:
             self.register_parameter("bias", None)
 
-    def forward(self, input):  # pylint: disable=W
+    def forward(self, input):
         # input [batch, repr, channel, y, x]
         assert input.dim() == 5
         assert input.size(1) == 8
@@ -36,11 +37,13 @@ class D4ConvRR(nn.Module):
             for w in range(8)
         ], dim=0)
 
-        output = input.view(input.size(0), 8 * input.size(2), input.size(3), input.size(4))
-        output = F.conv2d(output, self.scale * weight, **self.kwargs)
-        output = output.view(input.size(0), 8, -1, output.size(2), output.size(3))
+        bias = None
         if self.bias is not None:
-            output = output + self.bias.view(-1, 1, 1)  # TODO add bias via F.conv2d
+            bias = self.bias.repeat(8)
+
+        output = input.view(input.size(0), 8 * input.size(2), input.size(3), input.size(4))
+        output = F.conv2d(output, self.scale * weight, bias, **self.kwargs)
+        output = output.view(input.size(0), 8, -1, output.size(2), output.size(3))
         return output
 
 
@@ -52,7 +55,7 @@ def test_D4ConvRR(image, out_channels, kernel_size, **kwargs):
     ys = [c(gx) for gx in field_all_actions(image, 1, 3, 4)]
 
     for x, y in zip(xs, ys):
-        r = (x - y).std() / x.std()
+        r = (x - y).abs().max() / x.abs().max()
         assert r < 1e-5, repr(r)
 
     return xs, ys
@@ -69,18 +72,19 @@ class D4ConvIR(nn.Module):
         else:
             self.register_parameter("bias", None)
 
-    def forward(self, input):  # pylint: disable=W
+    def forward(self, input):
         # input [batch, channel, y, x]
         assert input.dim() == 4
 
         ws = image_all_actions(self.weight, 2, 3)
-
         weight = torch.cat(ws, dim=0)
 
-        output = F.conv2d(input, self.scale * weight, **self.kwargs)
-        output = output.view(input.size(0), 8, -1, output.size(2), output.size(3))
+        bias = None
         if self.bias is not None:
-            output = output + self.bias.view(-1, 1, 1)
+            bias = self.bias.repeat(8)
+
+        output = F.conv2d(input, self.scale * weight, bias, **self.kwargs)
+        output = output.view(input.size(0), 8, -1, output.size(2), output.size(3))
         return output
 
 
@@ -92,7 +96,7 @@ def test_D4ConvIR(image, out_channels, kernel_size, **kwargs):
     ys = [c(gx) for gx in image_all_actions(image, 2, 3)]
 
     for x, y in zip(xs, ys):
-        r = (x - y).std() / x.std()
+        r = (x - y).abs().max() / x.abs().max()
         assert r < 1e-5, repr(r)
 
     return xs, ys
@@ -109,13 +113,12 @@ class D4ConvRI(nn.Module):
         else:
             self.register_parameter("bias", None)
 
-    def forward(self, input):  # pylint: disable=W
+    def forward(self, input):
         # input [batch, repr, channel, y, x]
         assert input.dim() == 5
         assert input.size(1) == 8
 
         ws = image_all_actions(self.weight, 2, 3)
-
         weight = torch.cat(ws, dim=1)
 
         output = input.view(input.size(0), 8 * input.size(2), input.size(3), input.size(4))
@@ -131,7 +134,7 @@ def test_D4ConvRI(image, out_channels, kernel_size, **kwargs):
     ys = [c(gx) for gx in field_all_actions(image, 1, 3, 4)]
 
     for x, y in zip(xs, ys):
-        r = (x - y).std() / x.std()
+        r = (x - y).abs().max() / x.abs().max()
         assert r < 1e-5, repr(r)
 
     return xs, ys

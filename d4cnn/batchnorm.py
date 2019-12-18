@@ -13,8 +13,8 @@ class D4BatchNorm2d(nn.Module):
         self.eps = eps
         self.momentum = momentum
         if self.affine:
-            self.weight = nn.Parameter(torch.Tensor(num_features))
-            self.bias = nn.Parameter(torch.Tensor(num_features))
+            self.weight = nn.Parameter(torch.empty(num_features))
+            self.bias = nn.Parameter(torch.empty(num_features))
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)
@@ -26,11 +26,13 @@ class D4BatchNorm2d(nn.Module):
         self.running_mean.zero_()
         self.running_var.fill_(1)
         if self.affine:
-            self.weight.data.fill_(1)  # changed this (was uniform_ originally)
-            self.bias.data.zero_()
+            with torch.no_grad():
+                self.weight.fill_(1)  # changed this (was uniform_ originally)
+                self.bias.zero_()
 
     def forward(self, input):  # pylint: disable=W
         # input [batch, repr, channel, y, x]
+        self._check_input_dim(input)
         output = input.view(input.size(0) * input.size(1), *input.size()[2:])  # input [batch * repr, channel, y, x]
         output = F.batch_norm(
             output, self.running_mean, self.running_var, self.weight, self.bias,
@@ -50,4 +52,3 @@ class D4BatchNorm2d(nn.Module):
         if input.size(1) != 8:
             raise ValueError('expected size(1) = 8 (got {})'
                              .format(input.size(1)))
-        super()._check_input_dim(input)

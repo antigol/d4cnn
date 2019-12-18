@@ -1,4 +1,4 @@
-# pylint: disable=E1101,R,C
+# pylint: disable=no-member, invalid-name, missing-docstring
 import torch
 
 d4_mul = [
@@ -19,28 +19,22 @@ def field_action(u, field, g, h, w):
 
 
 def image_all_actions(image, h, w):
-    ih = torch.arange(image.size(h) - 1, -1, -1, dtype=torch.long, device=image.device)
-    iw = torch.arange(image.size(w) - 1, -1, -1, dtype=torch.long, device=image.device)
-
     e = image
-    m1 = image.index_select(w, iw)
-    m2 = image.index_select(h, ih)
-    i = m1.index_select(h, ih)
+    m1 = image.flip(w)
+    m2 = image.flip(h)
+    i = m1.flip(h)
     tr = image.transpose(w, h)
-    m1tr = tr.index_select(w, ih)
-    m2tr = tr.index_select(h, iw)
-    itr = m1tr.index_select(h, iw)
+    m1tr = tr.flip(w)
+    m2tr = tr.flip(h)
+    itr = m1tr.flip(h)
     return [e, m1, m2, i, tr, m1tr, m2tr, itr]
 
 
-def field_all_actions(field, g, h, w):  # pylint: disable=W0613
+def field_all_actions(field, g, h, w):
     # return [(xv) -> f(u^-1 x u  u^-1 v) for u in G]
     return [
         # field = (xv) -> f(u^-1 x u  v)
-        field.contiguous().index_select(g, field.new_tensor(
-            [d4_mul[d4_inv[u]][v] for v in range(8)],
-            dtype=torch.long
-        ))
+        field.contiguous().index_select(g, field.new_tensor(d4_mul[d4_inv[u]], dtype=torch.long))
         for u, field in enumerate(image_all_actions(field, h, w))
     ]
 
