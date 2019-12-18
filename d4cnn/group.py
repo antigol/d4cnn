@@ -10,6 +10,18 @@ d4_mul = [
 d4_inv = [0, 1, 2, 3, 4, 6, 5, 7]
 
 
+def test_group():
+    e = 0
+    G = list(range(8))
+
+    # inverse
+    assert all(d4_mul[d4_inv[a]][a] == e for a in G)
+    assert all(d4_mul[a][d4_inv[a]] == e for a in G)
+
+    # associativity
+    assert all(d4_mul[d4_mul[a][b]][c] == d4_mul[a][d4_mul[b][c]] for a in G for b in G for c in G)
+
+
 def image_action(u, image, h, w):
     return image_all_actions(image, h, w)[u]
 
