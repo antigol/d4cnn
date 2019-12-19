@@ -16,7 +16,7 @@ import tarfile
 import glob
 
 
-class GG:
+class GG1:
     '''
     Gravitational Lens Finding Challenge 1.1
     '''
