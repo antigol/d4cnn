@@ -1,23 +1,26 @@
-# pylint: disable=E1101,R,C
+# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .group import field_all_actions
+
 
 class D4BatchNorm2d(nn.Module):
-
     def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True):
         super().__init__()
         self.num_features = num_features
         self.affine = affine
         self.eps = eps
         self.momentum = momentum
+
         if self.affine:
-            self.weight = nn.Parameter(torch.empty(num_features))
-            self.bias = nn.Parameter(torch.empty(num_features))
+            self.weight = nn.Parameter(torch.ones(num_features))
+            self.bias = nn.Parameter(torch.zeros(num_features))
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)
+
         self.register_buffer('running_mean', torch.zeros(num_features))
         self.register_buffer('running_var', torch.ones(num_features))
         self.reset_parameters()
@@ -30,10 +33,13 @@ class D4BatchNorm2d(nn.Module):
                 self.weight.fill_(1)  # changed this (was uniform_ originally)
                 self.bias.zero_()
 
-    def forward(self, input):  # pylint: disable=W
-        # input [batch, repr, channel, y, x]
-        self._check_input_dim(input)
-        output = input.view(input.size(0) * input.size(1), *input.size()[2:])  # input [batch * repr, channel, y, x]
+    def forward(self, input):
+        # input [batch, channel, repr, y, x]
+        assert input.dim() == 5
+        assert input.size(2) == 8
+
+        # input [batch, channel, repr * y, x]
+        output = input.view(input.size(0), input.size(1), input.size(2) * input.size(3), input.size(4))
         output = F.batch_norm(
             output, self.running_mean, self.running_var, self.weight, self.bias,
             self.training, self.momentum, self.eps)
@@ -45,10 +51,28 @@ class D4BatchNorm2d(nn.Module):
                 ' affine={affine})'
                 .format(name=self.__class__.__name__, **self.__dict__))
 
-    def _check_input_dim(self, input):  # pylint: disable=W
-        if input.dim() != 5:
-            raise ValueError('expected 5D input (got {}D input)'
-                             .format(input.dim()))
-        if input.size(1) != 8:
-            raise ValueError('expected size(1) = 8 (got {})'
-                             .format(input.size(1)))
+
+def test_D4BatchNorm2d(image, **kwargs):
+    # image [batch, channel, repr, y, x]
+    bn = D4BatchNorm2d(image.size(1), **kwargs)
+    with torch.no_grad():
+        bn.weight.normal_()
+        bn.bias.normal_()
+
+    bn.train()
+    xs = field_all_actions(bn(image), 2, 3, 4)
+    ys = [bn(gx) for gx in field_all_actions(image, 2, 3, 4)]
+
+    for x, y in zip(xs, ys):
+        r = (x - y).abs().max() / x.abs().max()
+        assert r < 1e-5, repr(r)
+
+    bn.eval()
+    xs = field_all_actions(bn(image), 2, 3, 4)
+    ys = [bn(gx) for gx in field_all_actions(image, 2, 3, 4)]
+
+    for x, y in zip(xs, ys):
+        r = (x - y).abs().max() / x.abs().max()
+        assert r < 1e-5, repr(r)
+
+    return xs, ys
