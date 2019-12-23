@@ -5,6 +5,7 @@ import os
 import random
 from collections import defaultdict
 
+import sklearn
 import torch
 import torch.nn as nn
 import tqdm
@@ -110,6 +111,10 @@ def execute(args):
             'test': evaluate(testset, '[epoch {}] eval testset'.format(epoch + 1)),
         }]
 
+        auctr = sklearn.metrics.roc_auc_score(results[-1]['train']['labels'], results[-1]['train']['output'])
+        aucte = sklearn.metrics.roc_auc_score(results[-1]['test']['labels'], results[-1]['test']['output'])
+        print("train={:.2f}% test={:.2f}%".format(100 * auctr, 100 * aucte))
+
         yield {
             'args': args,
             'epochs': results,
@@ -172,7 +177,7 @@ def inf_shuffle(xs):
 
 class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
     def __init__(self, dataset):
-        super().__init__()
+        super().__init__(dataset)
         indices = defaultdict(list)
         for i, (_, label) in enumerate(dataset):
             indices[label].append(i)
@@ -195,4 +200,3 @@ class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
 
 if __name__ == "__main__":
     main()
-
