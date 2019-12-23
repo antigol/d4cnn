@@ -1,4 +1,4 @@
-# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ
+# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ, line-too-long
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

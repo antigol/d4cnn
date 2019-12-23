@@ -1,4 +1,4 @@
-# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ
+# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ, line-too-long
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -34,12 +34,16 @@ class D4BatchNorm2d(nn.Module):
                 self.bias.zero_()
 
     def forward(self, input):
-        # input [batch, channel, repr, y, x]
-        assert input.dim() == 5
-        assert input.size(2) == 8
+        if input.dim() == 5:
+            # input [batch, channel, repr, y, x]
+            assert input.size(2) == 8
 
-        # input [batch, channel, repr * y, x]
-        output = input.view(input.size(0), input.size(1), input.size(2) * input.size(3), input.size(4))
+            # input [batch, channel, repr * y, x]
+            output = input.view(input.size(0), input.size(1), input.size(2) * input.size(3), input.size(4))
+        if input.dim() == 4:
+            # input [batch, channel, y, x]
+            output = input
+
         output = F.batch_norm(
             output, self.running_mean, self.running_var, self.weight, self.bias,
             self.training, self.momentum, self.eps)
