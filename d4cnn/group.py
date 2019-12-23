@@ -30,7 +30,8 @@ def field_action(u, field, g, h, w):
     return field_all_actions(field, g, h, w)[u]
 
 
-def image_all_actions(image, h, w):
+@torch.jit.script
+def image_all_actions(image, h: int, w: int):
     e = image
     m1 = image.flip(w)
     m2 = image.flip(h)

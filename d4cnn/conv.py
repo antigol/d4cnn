@@ -11,6 +11,21 @@ def uniform(*size):
     return (2 * x - 1) * (3 ** 0.5)
 
 
+def _prepare_weights(weight):
+    ws = image_all_actions(weight, 5, 6)
+
+    weight = torch.cat([
+        torch.cat([
+            ws[w][d4_mul[d4_inv[w]][v]]
+            for v in range(8)
+        ], dim=3)
+        for w in range(8)
+    ], dim=1)
+    return weight.view(weight.size(0) * 8, weight.size(2) * 8, weight.size(4), weight.size(5))
+
+_prepare_weights = torch.jit.trace(_prepare_weights, (torch.randn(8, 10, 1, 11, 1, 5, 5),))
+
+
 class D4ConvRR(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, bias=True, groups=1, stride=1, **kwargs):
         super().__init__()
@@ -34,16 +49,7 @@ class D4ConvRR(nn.Module):
         assert input.dim() == 5
         assert input.size(2) == 8
 
-        ws = image_all_actions(self.weight, 5, 6)
-
-        weight = torch.cat([
-            torch.cat([
-                ws[w][d4_mul[d4_inv[w]][v]]
-                for v in range(8)
-            ], dim=3)
-            for w in range(8)
-        ], dim=1)
-        weight = weight.view(weight.size(0) * 8, weight.size(2) * 8, weight.size(4), weight.size(5))
+        weight = _prepare_weights(self.weight)
 
         bias = None
         if self.bias is not None:
