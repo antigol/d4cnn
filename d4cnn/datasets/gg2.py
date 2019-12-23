@@ -1,4 +1,4 @@
-# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ
+# pylint: disable=no-member, invalid-name, missing-docstring, redefined-builtin, arguments-differ, bad-whitespace
 import csv
 import glob
 import math
@@ -8,7 +8,6 @@ import requests
 import torch
 import torch.utils.data
 from astropy.io import fits
-from six.moves import urllib
 from tqdm import tqdm
 
 
