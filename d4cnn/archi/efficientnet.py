@@ -2,7 +2,12 @@
 import torch
 import torch.nn as nn
 
-from d4cnn import D4BatchNorm2d, D4ConvIR, D4ConvRR, D4ConvRI, D4Wrapper
+from d4cnn import D4BatchNorm2d, D4ConvIR, D4ConvRR, D4ConvRI
+
+
+class GlobalAvgPool2d(nn.Module):
+    def forward(self, x):
+        return x.mean([-1, -2], keepdim=True)
 
 
 def change_submodules(m, fn):
@@ -35,6 +40,9 @@ def equivariantize_module(m):
     if isinstance(m, nn.BatchNorm2d):
         return D4BatchNorm2d(m.num_features, m.eps, m.momentum, m.affine)
 
+    if isinstance(m, nn.AdaptiveAvgPool2d):
+        return GlobalAvgPool2d()
+
     return m
 
 
@@ -44,7 +52,7 @@ def equivariantize_network(f, in_channels):
     f.conv_stem = D4ConvIR(in_channels, m.out_channels, m.kernel_size[0],
                            stride=m.stride, padding=padding, dilation=m.dilation, bias=m.bias is not None, groups=m.groups)
 
-    f.global_pool = D4Wrapper(f.global_pool)
+    #f.global_pool = D4Wrapper(f.global_pool)
 
     m = f.conv_head
     f.conv_head = D4ConvRI(m.in_channels, m.out_channels, m.kernel_size[0], m.bias is not None)
