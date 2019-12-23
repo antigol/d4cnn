@@ -151,10 +151,6 @@ def main():
         raise
 
 
-if __name__ == "__main__":
-    main()
-
-
 class RunningOp:
     def __init__(self, n, op):
         self.x = []
@@ -195,3 +191,8 @@ class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
 
     def __len__(self):
         return self.n
+
+
+if __name__ == "__main__":
+    main()
+
