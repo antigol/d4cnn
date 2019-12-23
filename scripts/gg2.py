@@ -5,7 +5,7 @@ import os
 import random
 from collections import defaultdict
 
-import sklearn
+import sklearn.metrics
 import torch
 import torch.nn as nn
 import tqdm
@@ -42,6 +42,7 @@ def execute(args):
     equivariantize_network(f, in_channels=4)
     f.classifier = torch.nn.Linear(f.classifier.in_features, 1)
     f.to(args.device)
+    print("{} parameters in total".format(sum(p.numel() for p in f.parameters())))
 
     # evaluation
     def evaluate(dataset, desc):
@@ -63,7 +64,7 @@ def execute(args):
 
     # criterion and optimizer
     criterion = nn.SoftMarginLoss()
-    optimizer = torch.optim.SGD(f.parameters(), lr=args.lr, momentum=args.mom)
+    optimizer = torch.optim.Adam(f.parameters(), lr=args.lr)
 
     # datasets
     dataset = GG2(args.root, transform=image_transform, target_transform=target_transform)
@@ -133,7 +134,6 @@ def main():
 
     parser.add_argument("--bs", type=int, required=True)
     parser.add_argument("--lr", type=float, required=True)
-    parser.add_argument("--mom", type=float, required=True)
 
     parser.add_argument("--epoch", type=int, required=True)
     parser.add_argument("--device", type=str, required=True)
