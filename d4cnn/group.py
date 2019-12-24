@@ -22,34 +22,31 @@ def test_group():
     assert all(d4_mul[d4_mul[a][b]][c] == d4_mul[a][d4_mul[b][c]] for a in G for b in G for c in G)
 
 
-def image_action(u, image, h, w):
-    return image_all_actions(image, h, w)[u]
-
-
-def field_action(u, field, g, h, w):
-    return field_all_actions(field, g, h, w)[u]
-
-
 @torch.jit.script
-def image_all_actions(image, h: int, w: int):
-    e = image
-    m1 = image.flip(w)
-    m2 = image.flip(h)
-    i = m1.flip(h)
-    tr = image.transpose(w, h)
-    m1tr = tr.flip(w)
-    m2tr = tr.flip(h)
-    itr = m1tr.flip(h)
-    return [e, m1, m2, i, tr, m1tr, m2tr, itr]
+def image_action(u: int, image, h: int, w: int):
+    if u == 0:
+        return image
+    if u == 1:
+        return image.flip(w)
+    if u == 2:
+        return image.flip(h)
+    if u == 3:
+        return image.flip(w, h)
+    if u == 4:
+        return image.transpose(w, h)
+    if u == 5:
+        return image.transpose(w, h).flip(w)
+    if u == 6:
+        return image.transpose(w, h).flip(h)
+    if u == 7:
+        return image.transpose(w, h).flip(w, h)
+    raise ValueError()
 
 
-def field_all_actions(field, g, h, w):
-    # return [(xv) -> f(u^-1 x u  u^-1 v) for u in G]
-    return [
-        # field = (xv) -> f(u^-1 x u  v)
-        field.contiguous().index_select(g, field.new_tensor(d4_mul[d4_inv[u]], dtype=torch.long))
-        for u, field in enumerate(image_all_actions(field, h, w))
-    ]
+def field_action(u: int, field, g: int, h: int, w: int):
+    field = image_action(u, field, h, w).contiguous()  # f'(xv) = f(u^-1 x u  v)
+    i = field.new_tensor(d4_mul[d4_inv[u]], dtype=torch.long)
+    return field.index_select(g, i)  # f'(xv) = f(u^-1 x u  u^-1 v)
 
 
 def test_field_representation():

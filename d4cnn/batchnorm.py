@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .group import field_all_actions
+from .group import field_action
 
 
 class D4BatchNorm2d(nn.Module):
@@ -64,16 +64,16 @@ def test_D4BatchNorm2d(image, **kwargs):
         bn.bias.normal_()
 
     bn.train()
-    xs = field_all_actions(bn(image), 2, 3, 4)
-    ys = [bn(gx) for gx in field_all_actions(image, 2, 3, 4)]
+    xs = [field_action(u, bn(image), 2, 3, 4) for u in range(8)]
+    ys = [bn(field_action(u, image, 2, 3, 4)) for u in range(8)]
 
     for x, y in zip(xs, ys):
         r = (x - y).abs().max() / x.abs().max()
         assert r < 1e-5, repr(r)
 
     bn.eval()
-    xs = field_all_actions(bn(image), 2, 3, 4)
-    ys = [bn(gx) for gx in field_all_actions(image, 2, 3, 4)]
+    xs = [field_action(u, bn(image), 2, 3, 4) for u in range(8)]
+    ys = [bn(field_action(u, image, 2, 3, 4)) for u in range(8)]
 
     for x, y in zip(xs, ys):
         r = (x - y).abs().max() / x.abs().max()

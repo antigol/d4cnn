@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .group import d4_inv, d4_mul, field_all_actions, image_all_actions, field_action, image_action
+from .group import d4_inv, d4_mul, field_action, image_action
 
 
 def _from_tuple(x):
@@ -46,7 +46,7 @@ class D4ConvRR(nn.Module):
         assert input.dim() == 5
         assert input.size(2) == 8
 
-        ws = image_all_actions(self.weight, 5, 6)
+        ws = [image_action(u, self.weight, 5, 6) for u in range(8)]
 
         weight = torch.cat([
             torch.cat([
@@ -64,8 +64,7 @@ class D4ConvRR(nn.Module):
         if all(_valid_stride(w, self.padding, self.kernel_size, self.stride) for w in input.shape[3:]):
             return self._conv(input, weight, bias)
 
-        convs = [self._conv(x, weight, bias) for x in field_all_actions(input, 2, 3, 4)[:4]]
-        return sum(field_action(d4_inv[u], x, 2, 3, 4) for u, x in enumerate(convs)) / 4
+        return sum(field_action(d4_inv[u], self._conv(field_action(u, input, 2, 3, 4), weight, bias), 2, 3, 4) for u in range(4)) / 4
 
     def _conv(self, input, weight, bias):
         output = input.view(input.size(0), input.size(1) * 8, input.size(3), input.size(4))
@@ -85,8 +84,8 @@ def test_D4ConvRR(image, out_channels, kernel_size, **kwargs):
     with torch.no_grad():
         c.bias.normal_()
 
-    xs = field_all_actions(c(image), 2, 3, 4)
-    ys = [c(gx) for gx in field_all_actions(image, 2, 3, 4)]
+    xs = [field_action(u, c(image), 2, 3, 4) for u in range(8)]
+    ys = [c(field_action(u, image, 2, 3, 4)) for u in range(8)]
 
     for x, y in zip(xs, ys):
         r = (x - y).abs().max() / x.abs().max()
@@ -118,7 +117,7 @@ class D4ConvIR(nn.Module):
         # input [batch, channel, y, x]
         assert input.dim() == 4
 
-        ws = image_all_actions(self.weight, 3, 4)
+        ws = [image_action(u, self.weight, 3, 4) for u in range(8)]
         weight = torch.cat(ws, dim=1)
         weight = weight.view(weight.size(0) * 8, weight.size(2), weight.size(3), weight.size(4))
 
@@ -129,8 +128,7 @@ class D4ConvIR(nn.Module):
         if all(_valid_stride(w, self.padding, self.kernel_size, self.stride) for w in input.shape[2:]):
             return self._conv(input, weight, bias)
 
-        convs = [self._conv(x, weight, bias) for x in image_all_actions(input, 2, 3)[:4]]
-        return sum(field_action(d4_inv[u], x, 2, 3, 4) for u, x in enumerate(convs)) / 4
+        return sum(field_action(d4_inv[u], self._conv(image_action(u, input, 2, 3), weight, bias), 2, 3, 4) for u in range(4)) / 4
 
     def _conv(self, input, weight, bias):
         output = F.conv2d(input, self.scale * weight, bias, padding=self.padding, groups=self.groups, stride=self.stride, **self.kwargs)
@@ -149,8 +147,8 @@ def test_D4ConvIR(image, out_channels, kernel_size, **kwargs):
     with torch.no_grad():
         c.bias.normal_()
 
-    xs = field_all_actions(c(image), 2, 3, 4)
-    ys = [c(gx) for gx in image_all_actions(image, 2, 3)]
+    xs = [field_action(u, c(image), 2, 3, 4) for u in range(8)]
+    ys = [c(image_action(u, image, 2, 3)) for u in range(8)]
 
     for x, y in zip(xs, ys):
         r = (x - y).abs().max() / x.abs().max()
@@ -183,15 +181,14 @@ class D4ConvRI(nn.Module):
         assert input.dim() == 5
         assert input.size(2) == 8
 
-        ws = image_all_actions(self.weight, 3, 4)
+        ws = [image_action(u, self.weight, 3, 4) for u in range(8)]
         weight = torch.cat(ws, dim=2)
         weight = weight.view(weight.size(0), weight.size(1) * 8, weight.size(3), weight.size(4))
 
         if all(_valid_stride(w, self.padding, self.kernel_size, self.stride) for w in input.shape[3:]):
             return self._conv(input, weight, self.bias)
 
-        convs = [self._conv(x, weight, self.bias) for x in field_all_actions(input, 2, 3, 4)[:4]]
-        return sum(image_action(d4_inv[u], x, 2, 3) for u, x in enumerate(convs)) / 4
+        return sum(image_action(d4_inv[u], self._conv(field_action(u, input, 2, 3, 4), weight, self.bias), 2, 3) for u in range(4)) / 4
 
     def _conv(self, input, weight, bias):
         output = input.view(input.size(0), input.size(1) * 8, input.size(3), input.size(4))
@@ -210,8 +207,8 @@ def test_D4ConvRI(image, out_channels, kernel_size, **kwargs):
     with torch.no_grad():
         c.bias.normal_()
 
-    xs = image_all_actions(c(image), 2, 3)
-    ys = [c(gx) for gx in field_all_actions(image, 2, 3, 4)]
+    xs = [image_action(u, c(image), 2, 3) for u in range(8)]
+    ys = [c(field_action(u, image, 2, 3, 4)) for u in range(8)]
 
     for x, y in zip(xs, ys):
         r = (x - y).abs().max() / x.abs().max()
