@@ -13,6 +13,7 @@ from astropy.io import fits
 
 from d4cnn.archi.efficientnet import equivariantize_network
 from d4cnn.datasets.gg2 import GG2, target_transform
+from d4cnn.group import image_action
 
 
 def image_transform(images):
@@ -43,6 +44,11 @@ def execute(args):
     f.classifier = torch.nn.Linear(f.classifier.in_features, 1)
     f.to(args.device)
     print("{} parameters in total".format(sum(p.numel() for p in f.parameters())))
+
+    # equivariance
+    x = torch.randn(1, 4, 225, 225, device=args.device)
+    outs = [f(image_action(u, x, 2, 3)) for u in range(8)]
+    assert all((o - outs[0]).abs().max() < 1e-5 * outs.abs().max() for o in outs)
 
     # evaluation
     def evaluate(dataset, desc):
