@@ -46,9 +46,10 @@ def execute(args):
     print("{} parameters in total".format(sum(p.numel() for p in f.parameters())))
 
     # equivariance
-    x = torch.randn(1, 4, 225, 225, device=args.device)
-    outs = [f(image_action(u, x, 2, 3)) for u in range(8)]
-    assert all((o - outs[0]).abs().max() < 1e-5 * outs[0].abs().max() for o in outs)
+    with torch.no_grad():
+        x = torch.randn(args.bs, 4, 225, 225, device=args.device)
+        outs = [f(image_action(u, x, 2, 3)) for u in range(8)]
+        assert all((o - outs[0]).abs().max() < 1e-5 * outs[0].abs().max() for o in outs)
 
     # evaluation
     def evaluate(dataset, desc):
