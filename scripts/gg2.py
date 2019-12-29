@@ -27,8 +27,8 @@ def image_transform(images):
     vis, j, y, h = images
     vis, nisp = vis[None], torch.stack([j, y, h])
 
-    upsample = torch.nn.Upsample(size=200, mode='bilinear', align_corners=True)
-    # vis = upsample(vis[None])[0]
+    upsample = torch.nn.Upsample(size=225, mode='bilinear', align_corners=True)
+    vis = upsample(vis[None])[0]
     nisp = upsample(nisp[None])[0]
 
     return torch.cat([vis, nisp])
