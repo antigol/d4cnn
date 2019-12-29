@@ -77,6 +77,7 @@ class GG2(torch.utils.data.Dataset):
             os.makedirs(self.root)
 
         if train:
+            print('[GG2] Download csv file')
             log_path = os.path.join(self.root, "train.csv")
             if not os.path.isfile(log_path):
                 print("Download log...", flush=True)
@@ -84,6 +85,7 @@ class GG2(torch.utils.data.Dataset):
                 with open(log_path, 'wt') as f:
                     f.write(r.text)
 
+            print('[GG2] Parse csv file')
             keys = [
                 '',              'ID',           'x_crit',            'y_crit',
                 'source_ID',     'z_source',     'z_lens',            'mag_source',
@@ -107,6 +109,7 @@ class GG2(torch.utils.data.Dataset):
             url = self.url_test
             name = 'datapack2.0test'
 
+        print('[GG2] Download images')
         gz_path = os.path.join(self.root, "{}.tar.gz".format(name))
         if not os.path.isfile(gz_path):
             r = requests.get(url, stream=True)
@@ -120,6 +123,7 @@ class GG2(torch.utils.data.Dataset):
                     f.write(data)
             t.close()
 
+        print('[GG2] Uncompress images')
         tar_path = os.path.join(self.root, "{}.tar".format(name))
         if not os.path.isfile(tar_path):
             import gzip
@@ -137,6 +141,7 @@ class GG2(torch.utils.data.Dataset):
                         if not data:
                             break
 
+        print('[GG2] Untar images')
         dir_path = os.path.join(self.root, name)
         if not os.path.isdir(dir_path):
             import tarfile
@@ -144,6 +149,7 @@ class GG2(torch.utils.data.Dataset):
             tar.extractall(dir_path)
             tar.close()
 
+        print('[GG2] Get list of images')
         self.files = list(zip(*(
             sorted(glob.glob(os.path.join(dir_path, "Public/{}/*.fits".format(band))))
             for band in ("EUC_VIS", "EUC_J", "EUC_Y", "EUC_H")
