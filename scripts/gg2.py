@@ -48,8 +48,9 @@ def execute(args):
     # equivariance
     with torch.no_grad():
         x = torch.randn(args.bs, 4, 225, 225, device=args.device)
+        f.eval()
         outs = [f(image_action(u, x, 2, 3)) for u in range(8)]
-        assert all((o - outs[0]).abs().max() < 1e-2 * outs[0].abs().max() for o in outs), [(o - outs[0]).abs().max().div(outs[0].abs().max()).item() for o in outs]
+        assert all((o - outs[0]).abs().max() < 1e-4 * outs[0].abs().max() for o in outs), [(o - outs[0]).abs().max().div(outs[0].abs().max()).item() for o in outs]
 
     # evaluation
     def evaluate(dataset, desc):
