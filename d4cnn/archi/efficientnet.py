@@ -24,38 +24,46 @@ def change_submodules(m, fn):
         change_submodules(ch, fn)
 
 
-def equivariantize_module(m):
-    class_name = m.__class__.__name__
-
-    if class_name == "Conv2dSame":
-        assert m.kernel_size[0] % 2 == 1
-        padding = m.kernel_size[0] // 2
-        return D4ConvRR(m.in_channels, m.out_channels, m.kernel_size[0],
-                        stride=m.stride, padding=padding, dilation=m.dilation, bias=m.bias is not None, groups=m.groups)
-
-    if class_name == "Conv2d":
-        return D4ConvRR(m.in_channels, m.out_channels, m.kernel_size[0],
-                        stride=m.stride, padding=m.padding, dilation=m.dilation, bias=m.bias is not None, groups=m.groups)
-
-    if isinstance(m, nn.BatchNorm2d):
-        return D4BatchNorm2d(m.num_features, m.eps, m.momentum, m.affine)
-
-    if isinstance(m, nn.AdaptiveAvgPool2d):
-        return GlobalAvgPool2d()
-
-    return m
-
-
-def equivariantize_network(f, in_channels):
+def equivariantize_network(f, in_channels, frac):
     m = f.conv_stem
     padding = m.kernel_size[0] // 2
-    f.conv_stem = D4ConvIR(in_channels, m.out_channels, m.kernel_size[0],
+    f.conv_stem = D4ConvIR(in_channels, round(frac * m.out_channels), m.kernel_size[0],
                            stride=m.stride, padding=padding, dilation=m.dilation, bias=m.bias is not None, groups=m.groups)
+
+
+    def equivariantize_module(m):
+        class_name = m.__class__.__name__
+
+        if class_name == "Conv2dSame":
+            assert m.kernel_size[0] % 2 == 1
+            padding = m.kernel_size[0] // 2
+            if m.groups == m.in_channels:
+                groups = round(frac * m.groups)
+            if m.groups == 1:
+                groups = 1
+            return D4ConvRR(round(frac * m.in_channels), round(frac * m.out_channels), m.kernel_size[0],
+                            stride=m.stride, padding=padding, dilation=m.dilation, bias=m.bias is not None, groups=groups)
+
+        if class_name == "Conv2d":
+            if m.groups == m.in_channels:
+                groups = round(frac * m.groups)
+            if m.groups == 1:
+                groups = 1
+            return D4ConvRR(round(frac * m.in_channels), round(frac * m.out_channels), m.kernel_size[0],
+                            stride=m.stride, padding=m.padding, dilation=m.dilation, bias=m.bias is not None, groups=groups)
+
+        if isinstance(m, nn.BatchNorm2d):
+            return D4BatchNorm2d(round(frac * m.num_features), m.eps, m.momentum, m.affine)
+
+        if isinstance(m, nn.AdaptiveAvgPool2d):
+            return GlobalAvgPool2d()
+
+        return m
 
     #f.global_pool = D4Wrapper(f.global_pool)
 
     m = f.conv_head
-    f.conv_head = D4ConvRI(m.in_channels, m.out_channels, m.kernel_size[0], m.bias is not None)
+    f.conv_head = D4ConvRI(round(frac * m.in_channels), m.out_channels, m.kernel_size[0], m.bias is not None)
 
     change_submodules(f, equivariantize_module)
 

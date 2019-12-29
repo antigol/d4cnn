@@ -40,7 +40,7 @@ def execute(args):
     torch.manual_seed(args.init_seed)
     f = torch.hub.load(args.github, args.model, pretrained=False)
 
-    equivariantize_network(f, in_channels=4)
+    equivariantize_network(f, in_channels=4, frac=args.frac_channels)
     f.classifier = torch.nn.Linear(f.classifier.in_features, 1)
     f.to(args.device)
     print("{} parameters in total".format(sum(p.numel() for p in f.parameters())))
@@ -150,6 +150,7 @@ def main():
 
     parser.add_argument("--github", type=str, default='rwightman/gen-efficientnet-pytorch')
     parser.add_argument("--model", type=str, default='tf_mobilenetv3_small_minimal_100')
+    parser.add_argument("--frac_channels", type=float, required=True)
 
     parser.add_argument("--pickle", type=str, required=True)
     args = parser.parse_args()
