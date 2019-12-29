@@ -106,10 +106,12 @@ def execute(args):
 
         t.close()
 
+        n = min(args.ntr, args.nte)
+
         results += [{
             'epoch': epoch,
-            'train': evaluate(trainset, '[epoch {}] eval trainset'.format(epoch + 1)),
-            'test': evaluate(testset, '[epoch {}] eval testset'.format(epoch + 1)),
+            'train': evaluate(torch.utils.data.Subset(trainset, list(range(n))), '[epoch {}] eval trainset'.format(epoch + 1)),
+            'test': evaluate(torch.utils.data.Subset(testset, list(range(n))), '[epoch {}] eval testset'.format(epoch + 1)),
         }]
 
         auctr = sklearn.metrics.roc_auc_score(results[-1]['train']['labels'], results[-1]['train']['output'])
