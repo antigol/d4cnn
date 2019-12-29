@@ -48,7 +48,7 @@ def execute(args):
     # equivariance
     x = torch.randn(1, 4, 225, 225, device=args.device)
     outs = [f(image_action(u, x, 2, 3)) for u in range(8)]
-    assert all((o - outs[0]).abs().max() < 1e-5 * outs.abs().max() for o in outs)
+    assert all((o - outs[0]).abs().max() < 1e-5 * outs[0].abs().max() for o in outs)
 
     # evaluation
     def evaluate(dataset, desc):
